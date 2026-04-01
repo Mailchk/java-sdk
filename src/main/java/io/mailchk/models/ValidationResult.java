@@ -1,6 +1,7 @@
 package io.mailchk.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -133,7 +134,7 @@ public class ValidationResult {
      * @return list of MX records
      */
     public List<MxRecord> getMxRecords() {
-        return mxRecords;
+        return mxRecords != null ? mxRecords : Collections.emptyList();
     }
     
     /**
@@ -246,8 +247,9 @@ public class ValidationResult {
     
     /**
      * Gets the type of aliasing used.
-     * 
-     * @return alias type or null
+     *
+     * @return one of "plus_addressing", "dot_variation", "subdomain_addressing",
+     *         "provider_alias", or null if not aliased
      */
     public String getAliasType() {
         return aliasType;

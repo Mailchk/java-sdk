@@ -148,7 +148,7 @@ class ValidationResultTest {
         
         // Test isDeliverable() methods
         assertFalse(invalidResult.isDeliverable(), "Email with 5 score should not be deliverable");
-        assertFalse(invalidResult.isDeliverable(1), "Email with 5 score should not be deliverable (low threshold)");
+        assertFalse(invalidResult.isDeliverable(6), "Email with 5 score should not be deliverable when threshold is 6");
         
         // Test hasValidAuth() method
         assertFalse(invalidResult.hasValidAuth(), "Email with SPF=none and DMARC=none should not have valid auth");

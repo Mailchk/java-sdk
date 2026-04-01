@@ -1,0 +1,11 @@
+io\mailchk\MailchkClientBuilder.class
+io\mailchk\models\ValidationResult.class
+io\mailchk\exceptions\RateLimitException.class
+io\mailchk\models\BulkValidationResult.class
+io\mailchk\http\HttpClient.class
+io\mailchk\exceptions\ApiException.class
+io\mailchk\exceptions\ValidationException.class
+io\mailchk\MailchkClient.class
+io\mailchk\exceptions\AuthenticationException.class
+io\mailchk\models\MxRecord.class
+io\mailchk\exceptions\MailchkException.class

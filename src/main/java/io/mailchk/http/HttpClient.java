@@ -56,10 +56,7 @@ public class HttpClient {
         try {
             return postAsync(endpoint, requestBody, responseType).get();
         } catch (Exception e) {
-            if (e.getCause() instanceof MailchkException) {
-                throw (MailchkException) e.getCause();
-            }
-            throw new ApiException("Request failed: " + e.getMessage(), e);
+            throw unwrapException(e);
         }
     }
     
@@ -113,10 +110,7 @@ public class HttpClient {
         try {
             return getAsync(endpoint, responseType).get();
         } catch (Exception e) {
-            if (e.getCause() instanceof MailchkException) {
-                throw (MailchkException) e.getCause();
-            }
-            throw new ApiException("Request failed: " + e.getMessage(), e);
+            throw unwrapException(e);
         }
     }
     
@@ -198,9 +192,23 @@ public class HttpClient {
     }
     
     /**
+     * Unwraps MailchkException from ExecutionException/RuntimeException chains.
+     */
+    private MailchkException unwrapException(Exception e) {
+        Throwable cause = e.getCause();
+        if (cause instanceof MailchkException) {
+            return (MailchkException) cause;
+        }
+        if (cause instanceof RuntimeException && cause.getCause() instanceof MailchkException) {
+            return (MailchkException) cause.getCause();
+        }
+        return new ApiException("Request failed: " + e.getMessage(), e);
+    }
+
+    /**
      * Closes the HTTP client and releases resources.
      */
     public void close() {
-        // Java 11 HttpClient doesn't need explicit cleanup
+        // Java 21 HttpClient doesn't need explicit cleanup
     }
 }

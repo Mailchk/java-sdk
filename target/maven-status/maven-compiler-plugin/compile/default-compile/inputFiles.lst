@@ -1,0 +1,11 @@
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\exceptions\ApiException.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\exceptions\AuthenticationException.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\exceptions\MailchkException.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\exceptions\RateLimitException.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\exceptions\ValidationException.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\http\HttpClient.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\MailchkClient.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\MailchkClientBuilder.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\models\BulkValidationResult.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\models\MxRecord.java
+C:\mailchkrepo\java-sdk\src\main\java\io\mailchk\models\ValidationResult.java

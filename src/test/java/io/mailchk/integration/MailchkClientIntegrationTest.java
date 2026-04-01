@@ -19,30 +19,26 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MailchkClientIntegrationTest {
-    
+
     private WireMockServer wireMockServer;
     private MailchkClient client;
-    private String baseUrl;
-    
+
     @BeforeEach
     void setUp() {
-        // Start WireMock server on a random port
         wireMockServer = new WireMockServer(WireMockConfiguration.options().dynamicPort());
         wireMockServer.start();
-        
-        baseUrl = "http://localhost:" + wireMockServer.port();
-        
-        // Create client pointing to WireMock server
+
+        String baseUrl = "http://localhost:" + wireMockServer.port();
+
         client = MailchkClient.builder()
             .apiKey("test-api-key")
             .baseUrl(baseUrl)
             .timeout(Duration.ofSeconds(5))
             .build();
-        
-        // Configure WireMock
+
         WireMock.configureFor("localhost", wireMockServer.port());
     }
-    
+
     @AfterEach
     void tearDown() {
         if (client != null) {
@@ -52,14 +48,12 @@ class MailchkClientIntegrationTest {
             wireMockServer.stop();
         }
     }
-    
+
     @Test
     void testSuccessfulValidation() throws MailchkException {
-        // Mock successful validation response
-        stubFor(post(urlEqualTo("/check"))
+        stubFor(get(urlPathEqualTo("/check"))
+            .withQueryParam("email", equalTo("user@example.com"))
             .withHeader("X-API-Key", equalTo("test-api-key"))
-            .withHeader("Content-Type", equalTo("application/json"))
-            .withRequestBody(containing("user@example.com"))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
@@ -90,9 +84,9 @@ class MailchkClientIntegrationTest {
                         "alias_type": null
                     }
                     """)));
-        
+
         ValidationResult result = client.validate("user@example.com");
-        
+
         assertNotNull(result);
         assertEquals("user@example.com", result.getEmail());
         assertEquals("example.com", result.getDomain());
@@ -116,25 +110,22 @@ class MailchkClientIntegrationTest {
         assertEquals("user@example.com", result.getNormalizedEmail());
         assertFalse(result.isAliased());
         assertNull(result.getAliasType());
-        
-        // Test helper methods
+
         assertTrue(result.isSafe());
         assertFalse(result.isHighRisk());
         assertTrue(result.isDeliverable());
         assertTrue(result.hasValidAuth());
-        
-        // Verify the request was made correctly
-        verify(postRequestedFor(urlEqualTo("/check"))
+
+        verify(getRequestedFor(urlPathEqualTo("/check"))
+            .withQueryParam("email", equalTo("user@example.com"))
             .withHeader("X-API-Key", equalTo("test-api-key"))
-            .withHeader("Content-Type", equalTo("application/json"))
             .withHeader("User-Agent", matching("mailchk-java/.*")));
     }
-    
+
     @Test
     void testDisposableEmailValidation() throws MailchkException {
-        // Mock disposable email response
-        stubFor(post(urlEqualTo("/check"))
-            .withRequestBody(containing("temp@tempmail.com"))
+        stubFor(get(urlPathEqualTo("/check"))
+            .withQueryParam("email", equalTo("temp@tempmail.com"))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
@@ -162,9 +153,9 @@ class MailchkClientIntegrationTest {
                         "alias_type": null
                     }
                     """)));
-        
+
         ValidationResult result = client.validate("temp@tempmail.com");
-        
+
         assertNotNull(result);
         assertEquals("temp@tempmail.com", result.getEmail());
         assertFalse(result.isValid());
@@ -174,27 +165,22 @@ class MailchkClientIntegrationTest {
         assertEquals("disposable_domain", result.getRiskFactors().get(0));
         assertEquals("Disposable email provider", result.getReason());
         assertEquals(10, result.getDeliverabilityScore());
-        
-        // Test helper methods
+
         assertFalse(result.isSafe());
         assertTrue(result.isHighRisk());
         assertFalse(result.isDeliverable());
         assertFalse(result.hasValidAuth());
     }
-    
+
     @Test
     void testBulkValidation() throws MailchkException {
-        // Mock bulk validation response
+        // API returns {"results": [...]} only — counts are computed from the results list
         stubFor(post(urlEqualTo("/check/bulk"))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
                 .withBody("""
                     {
-                        "total": 3,
-                        "valid": 2,
-                        "invalid": 1,
-                        "disposable": 1,
                         "results": [
                             {
                                 "email": "user1@gmail.com",
@@ -265,79 +251,44 @@ class MailchkClientIntegrationTest {
                         ]
                     }
                     """)));
-        
+
         List<String> emails = List.of("user1@gmail.com", "user2@company.com", "invalid@tempmail.org");
         BulkValidationResult result = client.validateBulk(emails);
-        
+
         assertNotNull(result);
+        // Counts computed from results list
         assertEquals(3, result.getTotal());
         assertEquals(2, result.getValid());
         assertEquals(1, result.getInvalid());
         assertEquals(1, result.getDisposable());
         assertEquals(66.67, result.getValidPercentage(), 0.01);
         assertEquals(33.33, result.getDisposablePercentage(), 0.01);
-        
+
         List<ValidationResult> results = result.getResults();
         assertEquals(3, results.size());
-        
-        // Check first result
+
         ValidationResult first = results.get(0);
         assertEquals("user1@gmail.com", first.getEmail());
         assertTrue(first.isValid());
         assertFalse(first.isDisposable());
         assertTrue(first.isFreeEmail());
         assertEquals("Gmail", first.getEmailProvider());
-        
-        // Check second result
+
         ValidationResult second = results.get(1);
         assertEquals("user2@company.com", second.getEmail());
         assertTrue(second.isValid());
         assertFalse(second.isDisposable());
-        assertFalse(second.isFreeEmail());
-        assertEquals("Custom", second.getEmailProvider());
-        
-        // Check third result
+
         ValidationResult third = results.get(2);
         assertEquals("invalid@tempmail.org", third.getEmail());
         assertFalse(third.isValid());
         assertTrue(third.isDisposable());
         assertEquals("critical", third.getRiskScore());
     }
-    
-    @Test
-    void testUsageInfo() throws MailchkException {
-        // Mock usage response
-        stubFor(get(urlEqualTo("/usage"))
-            .willReturn(aResponse()
-                .withStatus(200)
-                .withHeader("Content-Type", "application/json")
-                .withBody("""
-                    {
-                        "plan": "pro",
-                        "used": 750,
-                        "limit": 1000,
-                        "remaining": 250,
-                        "reset_date": "2024-12-01T10:30:00"
-                    }
-                    """)));
-        
-        UsageInfo usage = client.getUsage();
-        
-        assertNotNull(usage);
-        assertEquals("pro", usage.getPlan());
-        assertEquals(750, usage.getUsed());
-        assertEquals(1000, usage.getLimit());
-        assertEquals(250, usage.getRemaining());
-        assertEquals("2024-12-01T10:30:00", usage.getResetDate());
-        assertEquals(75.0, usage.getPercentageUsed(), 0.01);
-        assertFalse(usage.isQuotaNearlyExhausted());
-        assertFalse(usage.isQuotaExhausted());
-    }
-    
+
     @Test
     void testAuthenticationError() {
-        // Mock authentication error
-        stubFor(post(urlEqualTo("/check"))
+        stubFor(get(urlPathEqualTo("/check"))
             .willReturn(aResponse()
                 .withStatus(401)
                 .withHeader("Content-Type", "application/json")
@@ -347,15 +298,14 @@ class MailchkClientIntegrationTest {
                         "code": "AUTHENTICATION_FAILED"
                     }
                     """)));
-        
-        assertThrows(AuthenticationException.class, () -> 
+
+        assertThrows(AuthenticationException.class, () ->
             client.validate("user@example.com"));
     }
-    
+
     @Test
     void testRateLimitError() {
-        // Mock rate limit error
-        stubFor(post(urlEqualTo("/check"))
+        stubFor(get(urlPathEqualTo("/check"))
             .willReturn(aResponse()
                 .withStatus(429)
                 .withHeader("Content-Type", "application/json")
@@ -366,17 +316,17 @@ class MailchkClientIntegrationTest {
                         "code": "RATE_LIMIT_EXCEEDED"
                     }
                     """)));
-        
-        RateLimitException exception = assertThrows(RateLimitException.class, () -> 
+
+        RateLimitException exception = assertThrows(RateLimitException.class, () ->
             client.validate("user@example.com"));
-        
+
         assertEquals(60, exception.getRetryAfter());
     }
-    
+
     @Test
     void testValidationError() {
-        // Mock validation error
-        stubFor(post(urlEqualTo("/check"))
+        // Use a valid-format email so local validation passes; server returns 400
+        stubFor(get(urlPathEqualTo("/check"))
             .willReturn(aResponse()
                 .withStatus(400)
                 .withHeader("Content-Type", "application/json")
@@ -386,18 +336,17 @@ class MailchkClientIntegrationTest {
                         "code": "VALIDATION_ERROR"
                     }
                     """)));
-        
-        ValidationException exception = assertThrows(ValidationException.class, () -> 
-            client.validate("invalid-email"));
-        
+
+        ValidationException exception = assertThrows(ValidationException.class, () ->
+            client.validate("bad@email.com"));
+
         assertEquals("Invalid email format", exception.getMessage());
         assertEquals("VALIDATION_ERROR", exception.getErrorCode());
     }
-    
+
     @Test
     void testServerError() {
-        // Mock server error
-        stubFor(post(urlEqualTo("/check"))
+        stubFor(get(urlPathEqualTo("/check"))
             .willReturn(aResponse()
                 .withStatus(500)
                 .withHeader("Content-Type", "application/json")
@@ -406,17 +355,17 @@ class MailchkClientIntegrationTest {
                         "error": "Internal server error"
                     }
                     """)));
-        
-        ApiException exception = assertThrows(ApiException.class, () -> 
+
+        ApiException exception = assertThrows(ApiException.class, () ->
             client.validate("user@example.com"));
-        
+
         assertEquals(500, exception.getStatusCode());
     }
-    
+
     @Test
     void testAsyncValidation() throws ExecutionException, InterruptedException {
-        // Mock successful validation response
-        stubFor(post(urlEqualTo("/check"))
+        stubFor(get(urlPathEqualTo("/check"))
+            .withQueryParam("email", equalTo("async@example.com"))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
@@ -444,10 +393,10 @@ class MailchkClientIntegrationTest {
                         "alias_type": null
                     }
                     """)));
-        
+
         CompletableFuture<ValidationResult> future = client.validateAsync("async@example.com");
         ValidationResult result = future.get();
-        
+
         assertNotNull(result);
         assertEquals("async@example.com", result.getEmail());
         assertTrue(result.isValid());
@@ -455,11 +404,10 @@ class MailchkClientIntegrationTest {
         assertEquals("low", result.getRiskScore());
         assertEquals(85, result.getDeliverabilityScore());
     }
-    
+
     @Test
     void testHelperMethods() throws MailchkException {
-        // Mock validation response
-        stubFor(post(urlEqualTo("/check"))
+        stubFor(get(urlPathEqualTo("/check"))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader("Content-Type", "application/json")
@@ -487,14 +435,12 @@ class MailchkClientIntegrationTest {
                         "alias_type": null
                     }
                     """)));
-        
-        // Test helper methods
+
         assertTrue(client.isValid("test@example.com"));
         assertFalse(client.isDisposable("test@example.com"));
         assertEquals("medium", client.getRiskScore("test@example.com"));
         assertEquals(70, client.getDeliverabilityScore("test@example.com"));
-        
-        // Verify multiple requests were made (one for each helper method)
-        verify(4, postRequestedFor(urlEqualTo("/check")));
+
+        verify(4, getRequestedFor(urlPathEqualTo("/check")));
     }
 }

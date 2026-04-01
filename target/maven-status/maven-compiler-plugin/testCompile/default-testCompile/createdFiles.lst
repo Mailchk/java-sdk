@@ -1,0 +1,7 @@
+io\mailchk\MailchkClientBuilderTest.class
+io\mailchk\models\MxRecordTest.class
+io\mailchk\models\ValidationResultTest.class
+io\mailchk\integration\MailchkClientIntegrationTest.class
+io\mailchk\MailchkClientTest.class
+io\mailchk\exceptions\ExceptionTest.class
+io\mailchk\models\BulkValidationResultTest.class

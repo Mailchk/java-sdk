@@ -124,25 +124,31 @@ class MailchkClientTest {
     
     @Test
     void testBulkValidationResultHelperMethods() {
-        BulkValidationResult result = new BulkValidationResult(100, 85, 15, 5, null);
-        
-        assertEquals(85.0, result.getValidPercentage(), 0.01);
-        assertEquals(5.0, result.getDisposablePercentage(), 0.01);
+        // Counts are computed from the results list, not deserialized from JSON
+        ValidationResult valid1 = new ValidationResult();
+        valid1.setValid(true);
+        valid1.setDisposable(false);
+
+        ValidationResult valid2 = new ValidationResult();
+        valid2.setValid(true);
+        valid2.setDisposable(false);
+
+        ValidationResult disposable1 = new ValidationResult();
+        disposable1.setValid(false);
+        disposable1.setDisposable(true);
+
+        BulkValidationResult result = new BulkValidationResult(
+            Arrays.asList(valid1, valid2, disposable1)
+        );
+
+        assertEquals(3, result.getTotal());
+        assertEquals(2, result.getValid());
+        assertEquals(1, result.getInvalid());
+        assertEquals(1, result.getDisposable());
+        assertEquals(66.67, result.getValidPercentage(), 0.01);
+        assertEquals(33.33, result.getDisposablePercentage(), 0.01);
     }
-    
-    @Test
-    void testUsageInfoHelperMethods() {
-        UsageInfo usage = new UsageInfo("pro", 950, 1000, 50, "2024-01-01T00:00:00");
-        
-        assertEquals(95.0, usage.getPercentageUsed(), 0.01);
-        assertTrue(usage.isQuotaNearlyExhausted());
-        assertFalse(usage.isQuotaExhausted());
-        
-        // Test exhausted quota
-        usage.setRemaining(0);
-        assertTrue(usage.isQuotaExhausted());
-    }
-    
+
     @Test
     void testExceptionHierarchy() {
         // Test exception inheritance

@@ -134,19 +134,6 @@ for (ValidationResult r : result.getResults()) {
 }
 ```
 
-### Check Usage
-
-```java
-import io.mailchk.models.UsageInfo;
-
-UsageInfo usage = client.getUsage();
-
-System.out.println("Used: " + usage.getUsed() + "/" + usage.getLimit());
-System.out.println("Remaining: " + usage.getRemaining());
-System.out.println("Resets: " + usage.getResetDate());
-System.out.printf("Usage: %.1f%%%n", usage.getPercentageUsed());
-```
-
 ### Async Usage
 
 ```java
@@ -281,14 +268,14 @@ MailchkClient client = MailchkClient.builder()
 
 ## Requirements
 
-- Java 11 or higher
+- Java 17 or higher
 - Valid Mailchk API key ([Get one free](https://mailchk.io))
 
 ## Dependencies
 
 This SDK uses the following dependencies:
 - Jackson (JSON processing)
-- Java 11+ HttpClient (HTTP communication)
+- Java 17+ HttpClient (HTTP communication)
 
 ## License
 

@@ -4,11 +4,14 @@ import io.mailchk.exceptions.*;
 import io.mailchk.http.HttpClient;
 import io.mailchk.models.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 
 /**
  * Main client for the Mailchk email validation API.
@@ -26,9 +29,10 @@ import java.util.concurrent.CompletableFuture;
  * }</pre>
  */
 public class MailchkClient implements AutoCloseable {
-    
+
     private static final String DEFAULT_BASE_URL = "https://api.mailchk.io/v1";
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(30);
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     
     private final HttpClient httpClient;
     
@@ -71,27 +75,21 @@ public class MailchkClient implements AutoCloseable {
      */
     public ValidationResult validate(String email) throws MailchkException {
         validateEmailParameter(email);
-        
-        Map<String, Object> request = new HashMap<>();
-        request.put("email", email.trim().toLowerCase());
-        
-        return httpClient.post("/check", request, ValidationResult.class);
+        String encodedEmail = URLEncoder.encode(email.trim().toLowerCase(), StandardCharsets.UTF_8);
+        return httpClient.get("/check?email=" + encodedEmail, ValidationResult.class);
     }
-    
+
     /**
      * Validates a single email address asynchronously.
-     * 
+     *
      * @param email the email address to validate
      * @return CompletableFuture with the validation result
      * @throws IllegalArgumentException if email is null or invalid format
      */
     public CompletableFuture<ValidationResult> validateAsync(String email) {
         validateEmailParameter(email);
-        
-        Map<String, Object> request = new HashMap<>();
-        request.put("email", email.trim().toLowerCase());
-        
-        return httpClient.postAsync("/check", request, ValidationResult.class);
+        String encodedEmail = URLEncoder.encode(email.trim().toLowerCase(), StandardCharsets.UTF_8);
+        return httpClient.getAsync("/check?email=" + encodedEmail, ValidationResult.class);
     }
     
     /**
@@ -228,27 +226,8 @@ public class MailchkClient implements AutoCloseable {
     }
     
     /**
-     * Gets current API usage and quota information.
-     * 
-     * @return usage information
-     * @throws MailchkException if the request fails
-     */
-    public UsageInfo getUsage() throws MailchkException {
-        return httpClient.get("/usage", UsageInfo.class);
-    }
-    
-    /**
-     * Gets current API usage and quota information (async).
-     * 
-     * @return CompletableFuture with usage information
-     */
-    public CompletableFuture<UsageInfo> getUsageAsync() {
-        return httpClient.getAsync("/usage", UsageInfo.class);
-    }
-    
-    /**
      * Validates email parameter for API calls.
-     * 
+     *
      * @param email the email to validate
      * @throws IllegalArgumentException if email is invalid
      */
@@ -256,8 +235,8 @@ public class MailchkClient implements AutoCloseable {
         if (email == null || email.trim().isEmpty()) {
             throw new IllegalArgumentException("Email cannot be null or empty");
         }
-        if (!email.contains("@")) {
-            throw new IllegalArgumentException("Email must contain @ symbol");
+        if (!EMAIL_PATTERN.matcher(email.trim()).matches()) {
+            throw new IllegalArgumentException("Email must be in a valid format");
         }
     }
     

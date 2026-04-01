@@ -1,127 +1,104 @@
 package io.mailchk.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * Represents the result of a bulk email validation request.
+ * The API returns {"results": [...]} only — summary counts are computed from the results list.
  */
 public class BulkValidationResult {
-    
-    @JsonProperty("total")
-    private int total;
-    
-    @JsonProperty("valid")
-    private int valid;
-    
-    @JsonProperty("invalid")
-    private int invalid;
-    
-    @JsonProperty("disposable")
-    private int disposable;
-    
+
     @JsonProperty("results")
     private List<ValidationResult> results;
-    
+
     public BulkValidationResult() {
     }
-    
-    public BulkValidationResult(int total, int valid, int invalid, int disposable, List<ValidationResult> results) {
-        this.total = total;
-        this.valid = valid;
-        this.invalid = invalid;
-        this.disposable = disposable;
-        this.results = results;
+
+    public BulkValidationResult(List<ValidationResult> results) {
+        this.results = results != null ? results : Collections.emptyList();
     }
-    
+
     /**
      * Gets the total number of emails validated.
-     * 
+     *
      * @return total count
      */
+    @JsonIgnore
     public int getTotal() {
-        return total;
+        return results != null ? results.size() : 0;
     }
-    
-    public void setTotal(int total) {
-        this.total = total;
-    }
-    
+
     /**
      * Gets the number of valid emails.
-     * 
+     *
      * @return valid count
      */
+    @JsonIgnore
     public int getValid() {
-        return valid;
+        return results != null ? (int) results.stream().filter(ValidationResult::isValid).count() : 0;
     }
-    
-    public void setValid(int valid) {
-        this.valid = valid;
-    }
-    
+
     /**
      * Gets the number of invalid emails.
-     * 
+     *
      * @return invalid count
      */
+    @JsonIgnore
     public int getInvalid() {
-        return invalid;
+        return results != null ? (int) results.stream().filter(r -> !r.isValid()).count() : 0;
     }
-    
-    public void setInvalid(int invalid) {
-        this.invalid = invalid;
-    }
-    
+
     /**
      * Gets the number of disposable emails.
-     * 
+     *
      * @return disposable count
      */
+    @JsonIgnore
     public int getDisposable() {
-        return disposable;
+        return results != null ? (int) results.stream().filter(ValidationResult::isDisposable).count() : 0;
     }
-    
-    public void setDisposable(int disposable) {
-        this.disposable = disposable;
-    }
-    
+
     /**
      * Gets the individual validation results.
-     * 
+     *
      * @return list of validation results
      */
     public List<ValidationResult> getResults() {
         return results;
     }
-    
+
     public void setResults(List<ValidationResult> results) {
         this.results = results;
     }
-    
+
     /**
      * Gets the percentage of valid emails.
-     * 
+     *
      * @return valid percentage (0.0 to 100.0)
      */
     public double getValidPercentage() {
-        return total > 0 ? (valid * 100.0) / total : 0.0;
+        int total = getTotal();
+        return total > 0 ? (getValid() * 100.0) / total : 0.0;
     }
-    
+
     /**
      * Gets the percentage of disposable emails.
-     * 
+     *
      * @return disposable percentage (0.0 to 100.0)
      */
     public double getDisposablePercentage() {
-        return total > 0 ? (disposable * 100.0) / total : 0.0;
+        int total = getTotal();
+        return total > 0 ? (getDisposable() * 100.0) / total : 0.0;
     }
-    
+
     @Override
     public String toString() {
         return String.format(
             "BulkValidationResult{total=%d, valid=%d, invalid=%d, disposable=%d, validPercentage=%.1f%%}",
-            total, valid, invalid, disposable, getValidPercentage()
+            getTotal(), getValid(), getInvalid(), getDisposable(), getValidPercentage()
         );
     }
 }
